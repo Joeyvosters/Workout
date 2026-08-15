@@ -64,12 +64,18 @@ check both paths — it's easy to fix one and break the other.
 
 ## Testing
 
-No test framework. The approach that has worked: load the inline script into a Node
-`vm` with stubbed `window`, `document`, `localStorage` and `fetch`, then drive it and
-assert on `store`. That caught the storage and parsing bugs. Worth rebuilding as
-`test/harness.js` if you touch persistence or parsing.
+No test framework — just Node's built-in `vm`, no dependencies to install. Run
+`npm test` (or `node test/tests.js`; `DEBUG=1` surfaces the app's console output).
 
-Cases that have broken before, worth keeping in any harness:
+`test/harness.js` loads the inline `<script>` out of `index.html` into a `vm` with
+stubbed `window`, `document`, `localStorage` and `fetch`, exposes the internals, and
+lets a test drive them and assert on `store`. It cuts the auto-run init section so
+tests aren't racing boot, and because `BACKEND` is captured once at load, each
+storage scenario calls `loadApp()` for a fresh instance with its own stubs.
+`test/tests.js` is the suite. If you touch persistence or parsing, add the new
+failure mode here.
+
+Cases the suite already covers (each was a real bug once):
 
 - rate-limited storage host, several saves in quick succession
 - host that rejects a value shape or key name outright

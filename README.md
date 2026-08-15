@@ -66,6 +66,14 @@ detects which at load:
 The Data tab exports JSON and CSV. Restore by file or by pasting JSON back in.
 Worth doing periodically: clearing browser data wipes `localStorage`.
 
+## Tests
+
+`npm test` (equivalently `node test/tests.js`) runs the regression suite. It has no
+dependencies — `test/harness.js` loads the app's inline script into Node's built-in
+`vm` with stubbed browser globals and drives it directly. The cases cover the storage
+pacing/probing/fallback paths, the tolerant JSON extraction, raw input surviving a
+failed parse, and the sick-day clock math.
+
 ## Working on it
 
 See [CLAUDE.md](CLAUDE.md) for architecture notes and the invariants to preserve
