@@ -1,0 +1,1389 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>30-Day Strength — Joey</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#EDEEF0;
+    --surface:#FFFFFF;
+    --surface-2:#F5F6F8;
+    --line:#D6D9DE;
+    --ink:#16181D;
+    --steel:#5A6270;
+    --red:#D8232A;
+    --red-soft:#FBE6E7;
+    --blue:#1F5FD0;
+    --blue-soft:#E4ECFB;
+    --yellow:#E9B60E;
+    --yellow-soft:#FCF2D5;
+    --green:#1E9E5A;
+    --green-soft:#E1F3E9;
+    --sick:#6D5BD0;
+    --sick-soft:#E8E5F8;
+    --radius:14px;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,"Roboto Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#111318;
+      --surface:#1B1E25;
+      --surface-2:#232730;
+      --line:#333945;
+      --ink:#EDEEF0;
+      --steel:#98A0AE;
+      --red:#FF5A5F;
+      --red-soft:#3A1E22;
+      --blue:#6699FF;
+      --blue-soft:#1C2740;
+      --yellow:#F2C63D;
+      --yellow-soft:#332B12;
+      --green:#4ECB8B;
+      --green-soft:#153026;
+      --sick:#A594F9;
+      --sick-soft:#241E3D;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;overflow-x:hidden}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:16px;line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:540px;margin:0 auto;padding:0 14px 132px}
+  /* ---------- header ---------- */
+  header{padding:18px 0 10px}
+  .daycount{display:flex;align-items:baseline;gap:10px}
+  .daycount .num{
+    font-family:var(--mono);font-size:34px;font-weight:700;letter-spacing:-1.5px;
+    font-variant-numeric:tabular-nums;color:var(--red);line-height:1
+  }
+  .daycount .of{font-family:var(--mono);font-size:15px;color:var(--steel);letter-spacing:.5px}
+  .eyebrow{
+    text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:700;color:var(--steel)
+  }
+  .strip{display:flex;gap:3px;margin-top:12px;align-items:flex-end;height:26px}
+  .tick{flex:1;min-width:0;border-radius:2px;background:var(--surface);border:1px solid var(--line);height:14px}
+  .tick.trained{background:var(--blue);border-color:var(--blue);height:26px}
+  .tick.rest{background:var(--yellow);border-color:var(--yellow);height:20px}
+  .tick.sick{background:var(--sick);border-color:var(--sick);height:10px}
+  .tick.added{border-style:dashed}
+  .planline{
+    margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--sick);
+    background:var(--sick-soft);border-radius:6px;padding:6px 9px;letter-spacing:.01em
+  }
+  .tick.future{opacity:.45}
+  .tick.today{outline:2px solid var(--red);outline-offset:1px}
+  .striplegend{display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--steel);font-family:var(--mono)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  /* ---------- cards ---------- */
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin:14px 0
+  }
+  .card.flush{padding:0;overflow:hidden}
+  .coach{font-size:20px;line-height:1.45;letter-spacing:-.01em}
+  .coach.loading{color:var(--steel);font-style:italic}
+  .reply{border-left:4px solid var(--green);background:var(--green-soft);border-color:transparent;font-size:17px}
+  .note-callout{border-left:4px solid var(--blue);background:var(--blue-soft);border-color:transparent}
+  .warnbox{border-left:4px solid var(--red);background:var(--red-soft);border-color:transparent}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.16em;color:var(--steel);margin:26px 0 8px}
+  h3{font-size:15px;margin:0 0 6px}
+  p{margin:0 0 10px}
+  p:last-child{margin-bottom:0}
+  .muted{color:var(--steel);font-size:14px}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  /* ---------- inputs ---------- */
+  textarea,input,select{
+    width:100%;font-family:var(--sans);font-size:17px;color:var(--ink);
+    background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px 13px
+  }
+  textarea{min-height:132px;resize:vertical;line-height:1.45}
+  textarea:focus,input:focus,select:focus{outline:3px solid var(--blue);outline-offset:1px;border-color:transparent}
+  label.field{display:block;margin:10px 0 0}
+  label.field span{
+    display:block;font-size:11px;text-transform:uppercase;letter-spacing:.12em;
+    color:var(--steel);font-weight:700;margin-bottom:4px
+  }
+  button{
+    font-family:var(--sans);font-size:16px;font-weight:600;cursor:pointer;
+    border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);
+    padding:13px 16px;min-height:48px
+  }
+  button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+  .btn-primary{background:var(--red);border-color:var(--red);color:#fff;width:100%;font-size:17px;margin-top:10px}
+  .btn-primary[disabled]{opacity:.55;cursor:default}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .btn-row button{flex:1 1 auto;min-width:120px}
+  .btn-sm{font-size:14px;padding:9px 12px;min-height:42px;flex:0 0 auto;min-width:0}
+  .btn-danger{color:var(--red);border-color:var(--line)}
+  /* ---------- chips ---------- */
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch}
+  .chip{
+    white-space:nowrap;font-size:14px;font-weight:600;padding:9px 14px;border-radius:999px;
+    border:1.5px solid var(--line);background:var(--surface);color:var(--steel);min-height:0
+  }
+  .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  /* ---------- rows ---------- */
+  .row{border-top:1px solid var(--line);padding:13px 16px}
+  .row:first-child{border-top:none}
+  .row .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .row .date{font-family:var(--mono);font-size:12px;color:var(--steel);letter-spacing:.02em}
+  .row .headline{font-size:17px;font-weight:600;margin:2px 0 0;word-break:break-word}
+  .row .sub{font-size:14px;color:var(--steel);word-break:break-word;margin-top:2px}
+  .tag{
+    font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+    padding:3px 7px;border-radius:5px;background:var(--surface-2);color:var(--steel);white-space:nowrap
+  }
+  .tag.blue{background:var(--blue-soft);color:var(--blue)}
+  .tag.yellow{background:var(--yellow-soft);color:var(--yellow)}
+  .tag.green{background:var(--green-soft);color:var(--green)}
+  .tag.sick{background:var(--sick-soft);color:var(--sick)}
+  .empty{padding:22px 16px;color:var(--steel);font-size:15px}
+  /* ---------- progress ---------- */
+  .goal{padding:13px 16px;border-top:1px solid var(--line)}
+  .goal:first-child{border-top:none}
+  .bar{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden;margin-top:9px}
+  .bar i{display:block;height:100%;background:var(--green);border-radius:5px}
+  .goalnums{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--steel);margin-top:6px}
+  .cal{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-top:4px}
+  .cal div{
+    aspect-ratio:1;border-radius:5px;border:1px solid var(--line);background:var(--surface-2);
+    font-family:var(--mono);font-size:10px;color:var(--steel);
+    display:flex;align-items:center;justify-content:center
+  }
+  .cal div.trained{background:var(--blue);border-color:var(--blue);color:#fff}
+  .cal div.rest{background:var(--yellow);border-color:var(--yellow);color:#231b00}
+  .cal div.sick{background:var(--sick);border-color:var(--sick);color:#fff}
+  .chartbox{position:relative;height:230px;margin-top:6px}
+  /* ---------- nav ---------- */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;
+    background:var(--surface);border-top:1px solid var(--line);
+    display:flex;padding-bottom:env(safe-area-inset-bottom)
+  }
+  nav button{
+    flex:1;border:none;border-radius:0;background:none;padding:11px 4px 13px;min-height:60px;
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--steel)
+  }
+  nav button[aria-current="page"]{color:var(--red);box-shadow:inset 0 3px 0 var(--red)}
+  nav .ico{display:block;font-size:19px;margin-bottom:2px;letter-spacing:0}
+  .toast{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:88px;z-index:40;
+    background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:10px;font-size:14px;
+    max-width:88vw;text-align:center
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .toast{animation:pop .18s ease-out}
+    @keyframes pop{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
+  }
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--red);border-radius:50%;vertical-align:-2px;margin-right:7px}
+  @media (prefers-reduced-motion:no-preference){.spin{animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}}
+</style>
+
+<div class="wrap">
+  <header id="hdr"></header>
+  <main id="view"></main>
+</div>
+<nav id="nav"></nav>
+
+<script>
+/* ========== constants ========== */
+const DEFAULT_START = "2026-08-03";
+let START = DEFAULT_START;
+/* The host rejected one particular key/value shape outright, so nothing is assumed:
+   these get probed at boot and the first combination that round-trips is used. */
+const KEY_CANDIDATES = ["strength:main","strengthTracker","strength_main","st"];
+const WRITE_MODES = [
+  {id:"string,shared", set:(k,v)=>BACKEND.set(k,v,false)},
+  {id:"string", set:(k,v)=>BACKEND.set(k,v)},
+  {id:"object,shared", set:(k,v)=>BACKEND.set(k,{data:v},false)},
+  {id:"object", set:(k,v)=>BACKEND.set(k,{data:v})}
+];
+const LEGACY_KEYS = ["strengthTracker_v2","joey:strength:v1"];
+const COLLS = ["sets","restDays","protein","scale","goals","trainerNotes"];
+const LOG_TABS = ["sets","restDays","sickDays","protein","scale","goals","trainerNotes"];
+const LABELS = {sets:"Sets",restDays:"Rest",sickDays:"Sick",protein:"Protein",scale:"Scale",goals:"Goals",trainerNotes:"Notes"};
+const BASE_LENGTH = 30;
+const FIELDS = {
+  sets:[["date","date"],["exercise","text"],["weight","number"],["reps","number"],["sets","number"],["phase","text"],["notes","text"]],
+  restDays:[["date","date"],["type","select"],["notes","text"]],
+  protein:[["date","date"],["grams","number"],["notes","text"]],
+  scale:[["date","date"],["weight","number"],["bodyFatPct","number"],["muscleMass","number"],["other","text"],["notes","text"]],
+  goals:[["exercise","text"],["baseline","text"],["target","text"],["targetDate","date"],["notes","text"]],
+  trainerNotes:[["date","date"],["note","text"]]
+};
+const OPTIONS = {type:["planned","sick","travel","other"]};
+const EQUIP = "adjustable bench, dumbbells up to 55 lb in 5 lb increments, pull-up bar, treadmill, light resistance bands";
+
+/* ========== dates ========== */
+const pad = n => String(n).padStart(2,"0");
+function todayISO(){const d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function toDate(iso){const [y,m,d]=String(iso||"").split("-").map(Number);return new Date(y,(m||1)-1,d||1);}
+function addDays(iso,n){const d=toDate(iso);d.setDate(d.getDate()+n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+function diffDays(a,b){return Math.round((toDate(b)-toDate(a))/86400000);}
+function dayNum(iso){return diffDays(START,iso||todayISO())+1;}
+function pretty(iso){const d=toDate(iso);return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});}
+
+/* ========== state ========== */
+let store = null;
+let memoryOnly = false;
+let state = {
+  tab:"checkin", logTab:"sets", chartExercise:null,
+  coach:"", coachErr:false, coachLoading:true,
+  draft:"", sending:false, reply:"", review:[],
+  editing:null, banner:null, trendNote:null, resetArmed:false, keyStatus:"", needsKey:false
+};
+
+/* ========== storage ========== */
+function blank(){
+  return {sets:[],restDays:[],protein:[],scale:[],goals:[],trainerNotes:[],
+    pendingRaw:[], meta:{start:DEFAULT_START, created:todayISO(), surfaced:[], lastTrendAttempt:null}};
+}
+function newId(){return "r"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function normalize(s){
+  const out = Object.assign(blank(), s||{});
+  COLLS.forEach(c=>{ if(!Array.isArray(out[c])) out[c]=[]; out[c].forEach(r=>{ if(!r.id) r.id=newId(); }); });
+  if(!Array.isArray(out.pendingRaw)) out.pendingRaw=[];
+  out.meta = Object.assign({start:DEFAULT_START,created:todayISO(),surfaced:[],lastTrendAttempt:null}, out.meta||{});
+  if(!Array.isArray(out.meta.surfaced)) out.meta.surfaced=[];
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(out.meta.start||"")) out.meta.start = DEFAULT_START;
+  return out;
+}
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+/* Runs in two places. Inside a Claude artifact the host injects window.storage;
+   on GitHub Pages (or any static host) that doesn't exist, so fall back to
+   localStorage, which is available everywhere except inside artifacts. */
+const IN_ARTIFACT = typeof window !== "undefined" && !!window.storage && typeof window.storage.set === "function";
+const localBackend = {
+  async set(k,v){ localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v)); return {key:k, value:localStorage.getItem(k)}; },
+  async get(k){ const v = localStorage.getItem(k); if(v === null) throw new Error("not found"); return {key:k, value:v}; }
+};
+function backend(){
+  if(IN_ARTIFACT) return window.storage;
+  try{ localStorage.setItem("__probe","1"); localStorage.removeItem("__probe"); return localBackend; }
+  catch(e){ return null; }
+}
+const BACKEND = backend();
+function haveStorage(){ return !!BACKEND; }
+
+/* A stored value may come back as the raw string or wrapped, depending on which
+   write mode the host accepted. Unwrap either. */
+function unwrap(res){
+  if(!res) return null;
+  const v = res.value;
+  if(typeof v === "string") return v;
+  if(v && typeof v === "object" && typeof v.data === "string") return v.data;
+  return null;
+}
+async function readKey(k){
+  try{
+    const raw = unwrap(await BACKEND.get(k, false));
+    if(raw && raw.trim()) return JSON.parse(raw);
+  }catch(e){}
+  return null;
+}
+
+let activeKey = null, activeMode = null, storageUsable = null, storageReport = "";
+/* Try key names and value shapes until one survives a write-then-read-back.
+   Stops at the first success, so a healthy host costs exactly one extra call. */
+async function discoverStorage(){
+  if(!haveStorage()){ storageUsable=false; storageReport="No storage available — localStorage is blocked in this browser."; return false; }
+  const stamp = "probe-"+Date.now();
+  const tried = [];
+  for(const k of KEY_CANDIDATES){
+    for(const mode of WRITE_MODES){
+      const pk = k+"_probe";
+      try{
+        await mode.set(pk, stamp);
+        const back = unwrap(await BACKEND.get(pk, false));
+        if(back === stamp){
+          activeKey = k; activeMode = mode; storageUsable = true;
+          storageReport = 'Using key "'+k+'" with '+mode.id+' values.';
+          return true;
+        }
+        tried.push(k+" / "+mode.id+" → wrote but read back something else");
+      }catch(e){
+        tried.push(k+" / "+mode.id+" → "+String(e && e.message || e));
+      }
+      await sleep(120);
+    }
+  }
+  storageUsable = false;
+  storageReport = "No key or value shape was accepted. "+(tried[0]||"");
+  console.warn("storage unusable:", tried);
+  return false;
+}
+async function loadStore(){
+  let data = null;
+  if(haveStorage()){
+    await discoverStorage();
+    const keys = [activeKey, ...KEY_CANDIDATES, ...LEGACY_KEYS].filter(Boolean);
+    for(const k of keys){ data = await readKey(k); if(data) break; }
+  }
+  if(data){ store = normalize(data); START = store.meta.start; return; }
+  store = normalize({
+    meta:{start:DEFAULT_START},
+    restDays:[{id:newId(),date:DEFAULT_START,type:"sick",notes:"Sick — program start pushed back a day"}]
+  });
+  START = store.meta.start;
+  await saveStore();
+}
+
+/* One writer, paced.
+   Two things broke this before: saves fired faster than the host's rate limiter
+   allowed, and the retry backoff was shorter than the limiter's window, so every
+   retry hit the same wall. Now writes are spaced by a hard floor, identical
+   payloads are skipped, and backoff starts above the window. */
+const MIN_WRITE_GAP = 1600;
+let _flushTimer=null, _waiters=[], _writing=false, _dirty=false;
+let _lastWriteAt = 0, _lastPayload = null;
+let lastSaveError = null, saveStats = {writes:0, retries:0, skipped:0};
+function saveStore(){
+  _dirty = true;
+  return new Promise(resolve=>{
+    _waiters.push(resolve);
+    if(!_flushTimer) _flushTimer = setTimeout(flush, 400);
+  });
+}
+function settle(ok){
+  const w = _waiters; _waiters = [];
+  w.forEach(fn=>fn(ok));
+}
+async function flush(force){
+  _flushTimer = null;
+  if(_writing){ _flushTimer = setTimeout(flush, 300); return; }
+  const gap = Date.now() - _lastWriteAt;
+  if(!force && gap < MIN_WRITE_GAP){ _flushTimer = setTimeout(flush, MIN_WRITE_GAP - gap); return; }
+  _writing = true; _dirty = false;
+  const payload = JSON.stringify(store);
+  if(payload === _lastPayload){
+    saveStats.skipped++;
+    _writing = false; settle(true);
+    return;
+  }
+  const ok = await writeWithRetry(payload);
+  if(ok){ _lastPayload = payload; saveStats.writes++; }
+  _writing = false;
+  const was = memoryOnly;
+  memoryOnly = !ok;
+  settle(ok);
+  if(_dirty && !_flushTimer) _flushTimer = setTimeout(flush, MIN_WRITE_GAP);
+  if(was !== memoryOnly && state.tab === "checkin") render();
+}
+async function writeWithRetry(payload){
+  if(!haveStorage()){ lastSaveError = "Storage isn't available in this view."; return false; }
+  if(payload.length > 4_500_000){ lastSaveError = "Log is too large to save. Export and start a fresh one."; return false; }
+  if(storageUsable === null) await discoverStorage();
+  if(!activeMode){
+    lastSaveError = storageReport || "Storage rejected every write.";
+    return false;
+  }
+  const backoff = [0, 1800, 4000];
+  for(let i=0;i<backoff.length;i++){
+    if(backoff[i]){ saveStats.retries++; await sleep(backoff[i]); }
+    try{
+      _lastWriteAt = Date.now();
+      const r = await activeMode.set(activeKey, payload);
+      _lastWriteAt = Date.now();
+      if(r !== undefined && r !== null){ lastSaveError = null; return true; }
+      const back = await readKey(activeKey);
+      if(back && JSON.stringify(back).length === payload.length){ lastSaveError = null; return true; }
+      lastSaveError = "Storage returned an empty result.";
+    }catch(e){
+      _lastWriteAt = Date.now();
+      lastSaveError = String(e && e.message || e);
+    }
+  }
+  /* The mode that worked at boot stopped working — re-probe once for another. */
+  const prev = activeMode;
+  activeMode = null; storageUsable = null;
+  await discoverStorage();
+  if(activeMode && activeMode !== prev){
+    try{
+      const r = await activeMode.set(activeKey, payload);
+      if(r !== undefined && r !== null){ lastSaveError = null; return true; }
+    }catch(e){ lastSaveError = String(e && e.message || e); }
+  }
+  const back = await readKey(activeKey);
+  if(back && JSON.stringify(back).length === payload.length){ lastSaveError = null; return true; }
+  console.warn("save failed after retries:", lastSaveError, "|", storageReport);
+  return false;
+}
+
+/* ========== derived ========== */
+const byDate = (a,b)=> String(b.date||b.targetDate||"").localeCompare(String(a.date||a.targetDate||""));
+function datesWithSets(){return new Set(store.sets.map(s=>s.date));}
+function isSick(r){return String(r.type||"").toLowerCase()==="sick";}
+function sickDates(){return new Set(store.restDays.filter(isSick).map(r=>r.date));}
+function restDates(){return new Set(store.restDays.filter(r=>!isSick(r)).map(r=>r.date));}
+/* Sick days pause the program clock: each one pushes the finish line out a day. */
+function sickCount(){return [...sickDates()].filter(d=>d>=START).length;}
+function planLength(){return BASE_LENGTH + sickCount();}
+function planEnd(){return addDays(START, planLength()-1);}
+function programDay(iso){
+  const d = iso||todayISO();
+  const paused = [...sickDates()].filter(x=>x>=START && x<d).length;
+  return diffDays(START,d)+1-paused;
+}
+function exercises(){
+  const seen=[]; store.sets.forEach(s=>{ const n=(s.exercise||"").trim(); if(n && !seen.some(x=>x.toLowerCase()===n.toLowerCase())) seen.push(n); });
+  return seen;
+}
+function bestFor(name){
+  const rows = store.sets.filter(s=>(s.exercise||"").toLowerCase()===name.toLowerCase());
+  let best=null;
+  rows.forEach(r=>{
+    const w = r.weight==null?null:Number(r.weight);
+    if(w!=null && !isNaN(w)){ if(!best || (best.weight??-1) < w) best={weight:w,reps:Number(r.reps)||null,date:r.date}; }
+    else if(!best){ best={weight:null,reps:Number(r.reps)||null,date:r.date}; }
+  });
+  return best;
+}
+function trainingDaysSinceRest(){
+  const rests = store.restDays.map(r=>r.date).sort();
+  const lastRest = rests.length?rests[rests.length-1]:null;
+  const days = [...datesWithSets()].filter(d=>!lastRest || d>lastRest).sort();
+  return {count:days.length, lastRest, days};
+}
+function facts(){
+  const t = todayISO(), dn = dayNum(t), pd = programDay(t);
+  const tr = trainingDaysSinceRest();
+  return {
+    today:t, calendarDay:dn, programDay:pd,
+    sickDaysTaken: sickCount(),
+    planLength: planLength(),
+    planEndDate: planEnd(),
+    todayIsSickDay: sickDates().has(t),
+    phase: pd<=7 ? "baseline" : "daily",
+    baselineEntryCount: store.sets.filter(s=>programDay(s.date)<=7).length,
+    exercisesTested: exercises(),
+    goalsSet: store.goals.length,
+    trainingDaysSinceLastBreak: tr.count,
+    lastBreakDay: tr.lastRest,
+    lastSickDay: [...sickDates()].sort().pop() || null,
+    loggedToday: {
+      sets: store.sets.some(s=>s.date===t),
+      protein: store.protein.some(p=>p.date===t),
+      scale: store.scale.some(s=>s.date===t),
+      rest: store.restDays.some(r=>r.date===t)
+    }
+  };
+}
+function historyForPrompt(limit){
+  const slim = {};
+  COLLS.forEach(c=>{
+    slim[c] = store[c].slice().sort(byDate).slice(0, limit||40).map(r=>{const o=Object.assign({},r); delete o.id; return o;});
+  });
+  return slim;
+}
+
+/* ========== Claude ========== */
+/* Inside an artifact the API call is proxied and needs no key. On a static host
+   it needs your own key, sent with the browser-access opt-in header. The key is
+   kept in this browser's localStorage and never leaves it except to Anthropic. */
+const SETTINGS_KEY = "strengthTracker_settings";
+let settings = {apiKey:"", model: IN_ARTIFACT ? "claude-sonnet-4-6" : "claude-sonnet-5"};
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if(raw) settings = Object.assign(settings, JSON.parse(raw));
+  }catch(e){}
+}
+function saveSettings(){
+  try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
+}
+function coachEnabled(){ return IN_ARTIFACT || !!settings.apiKey; }
+
+async function callClaude(prompt){
+  if(!coachEnabled()) throw new Error("NO_KEY");
+  const headers = {"Content-Type":"application/json"};
+  if(settings.apiKey){
+    headers["x-api-key"] = settings.apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    headers["anthropic-dangerous-direct-browser-access"] = "true";
+  }
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST", headers,
+    body: JSON.stringify({model:settings.model,max_tokens:1000,messages:[{role:"user",content:prompt}]})
+  });
+  if(!res.ok){
+    let detail = "";
+    try{ const j = await res.json(); detail = (j.error && j.error.message) || ""; }catch(e){}
+    throw new Error("API "+res.status+(detail?": "+detail:""));
+  }
+  const data = await res.json();
+  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+}
+/* Scan for a balanced object, ignoring braces inside strings. A plain
+   indexOf/lastIndexOf slice breaks the moment the model adds a closing remark. */
+let lastParseRepaired = false;
+function extractJSON(text){
+  lastParseRepaired = false;
+  let t = String(text||"").replace(/```[a-z]*/gi,"").replace(/```/g,"").trim();
+  const start = t.indexOf("{");
+  if(start === -1) throw new Error("No JSON object in reply");
+  let depth=0, inStr=false, esc=false, end=-1;
+  for(let i=start;i<t.length;i++){
+    const ch = t[i];
+    if(esc){ esc=false; continue; }
+    if(ch === "\\"){ esc=true; continue; }
+    if(ch === '"'){ inStr = !inStr; continue; }
+    if(inStr) continue;
+    if(ch === "{") depth++;
+    else if(ch === "}"){ depth--; if(depth===0){ end=i; break; } }
+  }
+  let body = end === -1 ? t.slice(start) : t.slice(start, end+1);
+  if(end === -1){
+    /* Reply was cut off. Trim back to the last complete row and close what's
+       still open, so a truncated response still saves the rows that made it. */
+    let lastClose = -1, d=0, s=false, e2=false;
+    for(let i=0;i<body.length;i++){
+      const ch = body[i];
+      if(e2){e2=false;continue;}
+      if(ch==="\\"){e2=true;continue;}
+      if(ch==='"'){s=!s;continue;}
+      if(s)continue;
+      if(ch==="{"||ch==="[")d++;
+      else if(ch==="}"||ch==="]"){ d--; if(d>=1) lastClose=i; }
+    }
+    if(lastClose === -1) throw new Error("Reply was cut off before any complete row");
+    lastParseRepaired = true;
+    body = body.slice(0, lastClose+1);
+    const stack = [];
+    let s2=false, e3=false;
+    for(const ch of body){
+      if(e3){e3=false;continue;}
+      if(ch==="\\"){e3=true;continue;}
+      if(ch==='"'){s2=!s2;continue;}
+      if(s2)continue;
+      if(ch==="{"||ch==="[") stack.push(ch);
+      else if(ch==="}"||ch==="]") stack.pop();
+    }
+    while(stack.length) body += stack.pop()==="{" ? "}" : "]";
+  }
+  body = body.replace(/,(\s*[}\]])/g,"$1");
+  return JSON.parse(body);
+}
+async function parseWithRetry(text){
+  let firstErr = null;
+  for(let attempt=0; attempt<2; attempt++){
+    try{
+      const prompt = attempt === 0 ? parsePrompt(text)
+        : parsePrompt(text) + "\n\nCRITICAL: your last reply was not valid JSON ("+firstErr+"). Reply with the raw JSON object only — first character {, last character }. No prose before or after, no code fences, no comments, no trailing commas.";
+      return extractJSON(await callClaude(prompt));
+    }catch(e){
+      firstErr = String(e && e.message || e);
+      console.warn("parse attempt "+(attempt+1)+" failed:", firstErr);
+    }
+  }
+  throw new Error(firstErr||"parse failed");
+}
+const CONTEXT = () => [
+  "You are Joey's personal strength trainer inside his tracking app.",
+  "Program: 30 training-program days starting "+START+". Today is "+todayISO()+" — program Day "+programDay(todayISO())+" of 30.",
+  "Sick days pause the clock: each sick day pushes the finish line out by one day, so the plan currently runs "+planLength()+" calendar days and ends "+planEnd()+". He has taken "+sickCount()+" sick day(s). Being sick never costs him program days and is never a failure.",
+  "Rest days are different from sick days: rest days are planned recovery inside the 30 and do NOT extend the plan.",
+  "Equipment available: "+EQUIP+".",
+  "Joey's level: some experience, inconsistent — returning to consistent training.",
+  "Program days 1–7 are the baseline week (finding working weights). Program day 8 onward is the daily training log.",
+  "",
+  "Computed facts about his log:",
+  JSON.stringify(facts(),null,1),
+  "",
+  "His log so far (JSON):",
+  JSON.stringify(historyForPrompt(50))
+].join("\n");
+
+function coachPrompt(){
+  return [
+    CONTEXT(),
+    "",
+    "Write the check-in message that greets him right now. Follow these rules:",
+    "- If it is program Day 1–7 and the baseline log is still mostly empty: ask what he's testing today. Remind him this week is only about finding a solid working weight for 8–12 clean reps on whatever he tries — no pressure to hit every exercise.",
+    "- If it is program Day 7 or 8, baseline data exists, and goals are empty: propose specific goal weights/reps for each exercise he tested, to hit by "+planEnd()+". Modest progressive overload — roughly 5–10%, or one dumbbell increment (5 lb), across the program. Do not overshoot.",
+    "- If it is program Day 9 or later: ask what he trained or plans to train today, and for weight/reps per exercise. Plain language, like \"what'd you do today?\"",
+    "- If todayIsSickDay is true, or he has been sick recently: tell him to rest and get well. Do not ask him to train or push numbers. Remind him the clock is paused and the plan already moved to "+planEnd()+" — he loses nothing.",
+    "- If he took sick days earlier and is back now, mention the plan runs to "+planEnd()+" so he still gets his full 30 days. Say it once, lightly.",
+    "- Every day, include one easy-to-skip line asking whether he tracked protein (grams), and if he has smart scale numbers, whether he wants to log those. One line, never a demand. Skip whichever of those he already logged today.",
+    "- If trainingDaysSinceLastBreak is 3 or more, gently suggest today could be a rest day, and make clear that's a good thing — recovery is where the work sticks, not a setback.",
+    "",
+    "Tone: encouraging personal trainer. Casual, warm, human. Never guilt about missed or lighter days. Explicitly pro-rest-day. Never imply he is failing the program if he skipped a day.",
+    "Format: 2–4 sentences of plain prose. No bullet points, no headings, no markdown, no lists, no emoji. He reads this on a phone and answers by voice. Output only the message."
+  ].join("\n");
+}
+function parsePrompt(text){
+  return [
+    CONTEXT(),
+    "",
+    "Joey just typed or dictated this check-in:",
+    "\"\"\""+text+"\"\"\"",
+    "",
+    "Convert it into structured rows. Respond with a single JSON object and nothing else — no prose, no markdown fences.",
+    "Shape (include only keys that have new rows; use [] otherwise):",
+    "{",
+    ' "sets":[{"date":"YYYY-MM-DD","exercise":"string","weight":number|null,"reps":number,"sets":number,"notes":"string","phase":"baseline"|"daily"}],',
+    ' "restDays":[{"date":"YYYY-MM-DD","type":"planned"|"sick"|"travel"|"other","notes":"string"}],',
+    ' "protein":[{"date":"YYYY-MM-DD","grams":number,"notes":"string"}],',
+    ' "scale":[{"date":"YYYY-MM-DD","weight":number|null,"bodyFatPct":number|null,"muscleMass":number|null,"other":"string","notes":"string"}],',
+    ' "goals":[{"exercise":"string","baseline":"string","target":"string","targetDate":"'+planEnd()+'","notes":"string"}]',
+    "}",
+    "",
+    "Rules:",
+    "- Default every date to "+todayISO()+" unless he clearly names another day; resolve \"yesterday\" etc. relative to that.",
+    '- phase is "baseline" when the row\'s date falls in program Days 1–7, otherwise "daily".',
+    "- One row per exercise. \"bench 40 for 10, three sets\" means weight 40, reps 10, sets 3.",
+    "- If different sets of the same exercise used different weights, write one row per weight. \"three sets, one at 30 and one at 40\" becomes a 30 lb row and a 40 lb row.",
+    "- Single-arm work: one row, and say \"per arm\" in notes.",
+    "- Band work, bodyweight, or anything with no stated load: weight null, and put the detail in notes.",
+    "- Cardio counts. Walking or treadmill work is a sets row with weight null, reps null, sets 1, and the distance or time in notes.",
+    "- If a number is genuinely ambiguous, leave it out of the numeric fields and quote it in notes rather than guessing.",
+    "- weight is pounds; use null for bodyweight movements like pull-ups.",
+    "- Match exercise names to ones already in his log when he clearly means the same movement; otherwise use a clean, plain name.",
+    "- Only create goals rows if he is actually agreeing to or stating goal numbers.",
+    '- If he took the day off, create a restDays row instead of sets, and pick type carefully: "sick" only when he is actually ill (sick, flu, fever, cold, food poisoning, injured and unable to train), "travel" when away, "planned" for a deliberate recovery day, "other" otherwise. Type matters — sick days extend the plan, rest days do not.',
+    '- "Too tired", "sore", "wasn\'t feeling it", or "skipped" is a rest day, not a sick day.',
+    "- Put anything qualitative he said (felt easy, shoulder tweak, last set was a grind) into that row's notes.",
+    "- Invent nothing. If a number isn't there, leave it null and note it."
+  ].join("\n");
+}
+function replyPrompt(text, saved){
+  return [
+    CONTEXT(),
+    "",
+    "He just logged this: \"\"\""+text+"\"\"\"",
+    "Rows saved from it: "+JSON.stringify(saved),
+    "",
+    "Reply with ONE brief, specific, encouraging response — a sentence or two, 40 words max.",
+    "Be concrete: name a new best if there is one, suggest trying +5 lb next time if a set looked easy, or simply credit him for showing up.",
+    "If he logged a rest day, affirm it as part of the program. Never guilt. No bullets, no markdown, no emoji. Output only the message."
+  ].join("\n");
+}
+function trendPrompt(){
+  return [
+    CONTEXT(),
+    "",
+    "A week has passed since the last trainer note. Look across the whole log for ONE clear trend worth naming:",
+    "a weight that has stalled, reps climbing steadily, training frequency dropping or holding, protein consistency, body weight direction.",
+    "Write it as a short dated observation for his log — 1–2 sentences, factual and encouraging, naming the specific exercise or number you're seeing.",
+    "If nothing has changed enough to be worth noting, say so in one sentence instead of inventing a trend.",
+    "No bullets, no markdown, no emoji. Output only the note text."
+  ].join("\n");
+}
+
+/* ========== render: header + nav ========== */
+function renderHeader(){
+  const t = todayISO(), dn = dayNum(t), pd = programDay(t);
+  const len = planLength(), sick = sickCount(), end = planEnd();
+  const trained = datesWithSets(), rest = restDates(), ill = sickDates();
+  let ticks = "";
+  for(let i=0;i<len;i++){
+    const d = addDays(START,i);
+    const cls = ["tick"];
+    if(trained.has(d)) cls.push("trained");
+    else if(ill.has(d)) cls.push("sick");
+    else if(rest.has(d)) cls.push("rest");
+    if(d>t) cls.push("future");
+    if(i>=BASE_LENGTH) cls.push("added");
+    if(d===t) cls.push("today");
+    ticks += '<div class="'+cls.join(" ")+'" title="'+d+' · program day '+programDay(d)+(ill.has(d)?" (sick — paused)":"")+'"></div>';
+  }
+  const illToday = ill.has(t);
+  const label = dn<1 ? "Starts "+pretty(START)
+    : illToday ? "Paused — sick day"
+    : pd>BASE_LENGTH ? "Program complete"
+    : (pd<=7?"Baseline week":"Training block");
+  hdr.innerHTML =
+    '<div class="eyebrow">'+label+'</div>'+
+    '<div class="daycount"><span class="num">'+(dn<1?"—":pad(Math.min(Math.max(pd,1),BASE_LENGTH)))+'</span>'+
+      '<span class="of">/ '+BASE_LENGTH+' · '+pretty(t)+'</span></div>'+
+    '<div class="strip">'+ticks+'</div>'+
+    '<div class="striplegend">'+
+      '<span><i class="dot" style="background:var(--blue)"></i>trained</span>'+
+      '<span><i class="dot" style="background:var(--yellow)"></i>rest</span>'+
+      '<span><i class="dot" style="background:var(--sick)"></i>sick</span>'+
+      '<span><i class="dot" style="background:var(--surface);border:1px solid var(--line)"></i>open</span>'+
+    '</div>'+
+    (sick ? '<div class="planline">+'+sick+' sick day'+(sick>1?"s":"")+" — plan extended to "+len+" days, ends "+pretty(end)+'</div>' : '');
+}
+function renderNav(){
+  const tabs = [["checkin","Check-in","◎"],["log","Log","≡"],["progress","Progress","◪"],["data","Data","↧"]];
+  nav.innerHTML = tabs.map(([id,label,ico])=>
+    '<button data-action="tab" data-tab="'+id+'"'+(state.tab===id?' aria-current="page"':'')+'>'+
+    '<span class="ico">'+ico+'</span>'+label+'</button>').join("");
+}
+
+/* ========== render: check-in ========== */
+function renderCheckin(){
+  let h = "";
+  if(memoryOnly) h += '<div class="card warnbox"><strong>Not saving in this view.</strong>'+
+    '<p class="muted">This viewer isn\'t giving the app storage, so today\'s entries live in memory until you close it. Everything still works — just copy your log before you leave, and paste it back on the Data tab next time.</p>'+
+    (storageReport?'<p class="muted mono" style="font-size:12px">'+esc(storageReport)+'</p>':'')+
+    (lastSaveError?'<p class="muted mono" style="font-size:12px">'+esc(lastSaveError)+'</p>':'')+
+    '<div class="btn-row"><button class="btn-sm" data-action="copy-json">Copy my log</button>'+
+    '<button class="btn-sm" data-action="retry-save">Try again</button></div></div>';
+
+  if(state.needsKey) h += '<div class="card note-callout"><strong>Coaching is off.</strong>'+
+    '<p class="muted">Add your Anthropic API key on the Data tab and I\'ll read your log, ask about today and parse what you dictate. Until then you can still log entries by hand from the Log tab.</p></div>';
+  h += '<div class="card coach'+(state.coachLoading?" loading":"")+'">'+
+    (state.coachLoading ? '<span class="spin"></span>Reading your log…' : esc(state.coach).replace(/\n/g,"<br>")) +
+    (state.coachErr ? '<div class="btn-row"><button class="btn-sm" data-action="recoach">Try again</button></div>' : '')+
+    '</div>';
+
+  if(state.trendNote){
+    h += '<div class="card note-callout"><div class="eyebrow">Weekly note · '+state.trendNote.date+'</div>'+
+      '<p style="margin-top:6px">'+esc(state.trendNote.note)+'</p>'+
+      '<div class="btn-row"><button class="btn-sm" data-action="dismiss-note">Got it</button></div></div>';
+  }
+
+  store.pendingRaw.filter(p=>p.status!=="done").forEach(p=>{
+    h += '<div class="card warnbox"><strong>This one didn\'t parse.</strong>'+
+      '<p class="muted">Saved your words exactly as you wrote them on '+p.date+'. Nothing was thrown away.</p>'+
+      '<p class="mono" style="font-size:14px">'+esc(p.text)+'</p>'+
+      '<div class="btn-row"><button class="btn-sm" data-action="retry-raw" data-id="'+p.id+'">Try parsing again</button>'+
+      '<button class="btn-sm btn-danger" data-action="drop-raw" data-id="'+p.id+'">Delete</button></div></div>';
+  });
+
+  h += '<div class="card"><label class="field"><span>Today\'s check-in</span>'+
+    '<textarea id="draft" placeholder="Talk to me — &quot;did bench 40 for 10, three sets, felt good, 150g protein&quot;">'+esc(state.draft)+'</textarea>'+
+    '</label>'+
+    '<button class="btn-primary" data-action="send"'+(state.sending?" disabled":"")+'>'+
+      (state.sending?'<span class="spin"></span>Logging…':'Send')+'</button>'+
+    '<div class="btn-row"><button class="btn-sm" data-action="quick-day" data-type="planned">Rest day</button>'+
+    '<button class="btn-sm" data-action="quick-day" data-type="sick" style="color:var(--sick)">Sick day</button></div>'+
+    '<p class="muted" style="margin-top:8px">A sick day pauses the clock and adds a day to the plan. A rest day doesn\'t — it\'s part of it.</p></div>';
+
+  if(state.reply){
+    h += '<div class="card reply">'+esc(state.reply)+'</div>';
+  }
+  if(state.review.length){
+    h += '<h2>Saved just now</h2><div class="card flush">'+
+      state.review.map(r=>rowHTML(r.collection, findRow(r.collection,r.id), true)).filter(Boolean).join("")+
+      '</div><p class="muted" style="padding:0 2px">Wrong number? Fix or delete it right here.</p>';
+  }
+  return h;
+}
+
+/* ========== render: rows ========== */
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function findRow(coll,id){return (store[coll]||[]).find(r=>r.id===id);}
+function summary(coll,r){
+  if(coll==="sets"){
+    const w = r.weight==null||r.weight===""?"BW":r.weight+" lb";
+    return {head:esc(r.exercise||"—"), sub:'<span class="mono">'+w+" × "+esc(r.reps??"?")+" reps × "+esc(r.sets??"?")+" sets</span>"+(r.notes?" · "+esc(r.notes):""),
+      tag:r.phase==="baseline"?'<span class="tag">baseline</span>':'<span class="tag blue">trained</span>'};
+  }
+  if(coll==="restDays"){
+    if(isSick(r)) return {head:"Sick day", sub:"Clock paused · plan +1 day"+(r.notes?" · "+esc(r.notes):""), tag:'<span class="tag sick">sick</span>'};
+    return {head:"Rest day", sub:esc(r.type||"other")+(r.notes?" · "+esc(r.notes):""), tag:'<span class="tag yellow">rest</span>'};
+  }
+  if(coll==="protein") return {head:'<span class="mono">'+esc(r.grams??"?")+" g protein</span>", sub:esc(r.notes||""), tag:""};
+  if(coll==="scale"){
+    const bits=[]; if(r.weight!=null&&r.weight!=="")bits.push(r.weight+" lb");
+    if(r.bodyFatPct!=null&&r.bodyFatPct!=="")bits.push(r.bodyFatPct+"% fat");
+    if(r.muscleMass!=null&&r.muscleMass!=="")bits.push(r.muscleMass+" lb muscle");
+    if(r.other)bits.push(r.other);
+    return {head:'<span class="mono">'+esc(bits.join(" · ")||"Scale entry")+"</span>", sub:esc(r.notes||""), tag:""};
+  }
+  if(coll==="goals") return {head:esc(r.exercise||"—"), sub:'<span class="mono">'+esc(r.baseline||"?")+" → "+esc(r.target||"?")+"</span> by "+esc(r.targetDate||planEnd())+(r.notes?" · "+esc(r.notes):""), tag:'<span class="tag green">goal</span>'};
+  return {head:esc(r.note||""), sub:"", tag:'<span class="tag">note</span>'};
+}
+function rowHTML(coll,r,compact){
+  if(!r) return "";
+  if(state.editing && state.editing.coll===coll && state.editing.id===r.id) return editorHTML(coll,r);
+  const s = summary(coll,r);
+  const d = r.date || r.targetDate || "";
+  return '<div class="row">'+
+    '<div class="top"><span class="date">'+esc(d?pretty(d):"")+(d?' · '+esc(d):'')+'</span>'+s.tag+'</div>'+
+    '<div class="headline">'+s.head+'</div>'+
+    (s.sub?'<div class="sub">'+s.sub+'</div>':'')+
+    '<div class="btn-row">'+
+      '<button class="btn-sm" data-action="edit" data-coll="'+coll+'" data-id="'+r.id+'">Edit</button>'+
+      '<button class="btn-sm btn-danger" data-action="del" data-coll="'+coll+'" data-id="'+r.id+'">Delete</button>'+
+    '</div></div>';
+}
+function editorHTML(coll,r){
+  const fields = FIELDS[coll].map(([name,type])=>{
+    const v = r[name]==null?"":r[name];
+    if(type==="select"){
+      const opts = OPTIONS[name]||[];
+      return '<label class="field"><span>'+name+'</span><select data-field="'+name+'">'+
+        opts.map(o=>'<option'+(String(v)===o?' selected':'')+'>'+o+'</option>').join("")+
+        '</select></label>';
+    }
+    return '<label class="field"><span>'+name+'</span>'+
+      '<input type="'+(type==="number"?"number":type==="date"?"date":"text")+'" '+
+      (type==="number"?'step="any" inputmode="decimal" ':'')+
+      'data-field="'+name+'" value="'+esc(v)+'"></label>';
+  }).join("");
+  return '<div class="row" data-editor="'+coll+'|'+r.id+'">'+fields+
+    '<div class="btn-row"><button class="btn-sm" data-action="save-edit" data-coll="'+coll+'" data-id="'+r.id+'" style="background:var(--ink);color:var(--paper);border-color:var(--ink)">Save row</button>'+
+    '<button class="btn-sm" data-action="cancel-edit">Cancel</button></div></div>';
+}
+
+/* ========== render: log ========== */
+function tabRows(tab){
+  if(tab==="restDays") return store.restDays.filter(r=>!isSick(r));
+  if(tab==="sickDays") return store.restDays.filter(isSick);
+  return store[tab]||[];
+}
+function renderLog(){
+  const c = state.logTab;
+  const coll = c==="sickDays" ? "restDays" : c;
+  const rows = tabRows(c).slice().sort(byDate);
+  let h = '<div class="chips">'+LOG_TABS.map(k=>
+    '<button class="chip" data-action="logtab" data-tab="'+k+'" aria-pressed="'+(k===c)+'">'+LABELS[k]+' '+tabRows(k).length+'</button>').join("")+'</div>';
+  h += '<div class="card flush">';
+  h += rows.length ? rows.map(r=>rowHTML(coll,r)).join("")
+    : '<div class="empty">'+(c==="sickDays"
+        ? "No sick days logged. Log one and the plan pushes out a day to make up for it."
+        : "Nothing here yet. Log it from the check-in screen and it lands here.")+'</div>';
+  h += '</div>';
+  if(c==="sickDays") h += '<p class="muted" style="padding:0 2px">Each sick day adds a day to the plan. Change a day\'s type to <strong>planned</strong> if it was really just rest.</p>';
+  else if(c!=="goals"&&c!=="trainerNotes") h += '<p class="muted" style="padding:0 2px">Newest first. Tap Edit to fix a number.</p>';
+  return h;
+}
+
+/* ========== render: progress ========== */
+function num(v){const n=parseFloat(String(v).replace(/[^0-9.\-]/g,""));return isNaN(n)?null:n;}
+function renderProgress(){
+  const ex = exercises();
+  if(!state.chartExercise || !ex.includes(state.chartExercise)) state.chartExercise = ex[0]||null;
+  let h = "";
+
+  h += '<h2>Per-exercise</h2>';
+  if(!ex.length){ h += '<div class="card"><p class="muted">No sets logged yet. Your first check-in fills this in.</p></div>'; }
+  else{
+    h += '<div class="card"><label class="field"><span>Exercise</span><select data-action="pick-exercise">'+
+      ex.map(e=>'<option'+(e===state.chartExercise?' selected':'')+'>'+esc(e)+'</option>').join("")+
+      '</select></label><div class="chartbox"><canvas id="c-ex"></canvas></div></div>';
+  }
+
+  h += '<h2>Goals</h2><div class="card flush">';
+  if(!store.goals.length) h += '<div class="empty">No goals yet. Around Day 7 I\'ll propose numbers based on what you tested.</div>';
+  else h += store.goals.map(g=>{
+    const b = num(g.baseline), t = num(g.target), best = bestFor(g.exercise||"");
+    const cur = best ? (best.weight!=null?best.weight:best.reps) : null;
+    let pct = 0;
+    if(b!=null && t!=null && cur!=null && t!==b) pct = Math.max(0,Math.min(100, ((cur-b)/(t-b))*100));
+    else if(cur!=null && t!=null && cur>=t) pct = 100;
+    return '<div class="goal"><h3>'+esc(g.exercise||"—")+'</h3>'+
+      '<div class="bar"><i style="width:'+pct.toFixed(0)+'%"></i></div>'+
+      '<div class="goalnums"><span>base '+esc(g.baseline??"—")+'</span>'+
+      '<span>now '+(cur!=null?esc(cur)+(best&&best.weight!=null?" lb":" reps"):"—")+'</span>'+
+      '<span>goal '+esc(g.target??"—")+'</span></div>'+
+      '<div class="muted mono" style="font-size:11px;margin-top:5px">'+pct.toFixed(0)+'% · by '+esc(g.targetDate||planEnd())+'</div></div>';
+  }).join("");
+  h += '</div>';
+
+  h += '<h2>Last 30 days</h2><div class="card">';
+  const trained = datesWithSets(), rest = restDates(), ill = sickDates(), t = todayISO();
+  let cells = "";
+  for(let i=29;i>=0;i--){
+    const d = addDays(t,-i);
+    const cls = trained.has(d)?"trained":ill.has(d)?"sick":rest.has(d)?"rest":"";
+    cells += '<div class="'+cls+'" title="'+d+'">'+toDate(d).getDate()+'</div>';
+  }
+  h += '<div class="cal">'+cells+'</div>'+
+    '<div class="striplegend" style="margin-top:10px;flex-wrap:wrap">'+
+    '<span><i class="dot" style="background:var(--blue)"></i>trained</span>'+
+    '<span><i class="dot" style="background:var(--yellow)"></i>rest</span>'+
+    '<span><i class="dot" style="background:var(--sick)"></i>sick</span>'+
+    '<span><i class="dot" style="background:var(--surface-2);border:1px solid var(--line)"></i>nothing logged</span></div>'+
+    (sickCount()?'<p class="muted" style="margin-top:10px">'+sickCount()+' sick day'+(sickCount()>1?"s":"")+
+      ' — program day '+programDay(t)+' of '+BASE_LENGTH+', finishing '+pretty(planEnd())+'.</p>':'')+'</div>';
+
+  h += '<h2>Protein</h2><div class="card">'+
+    (store.protein.length?'<div class="chartbox"><canvas id="c-pro"></canvas></div>':'<p class="muted">No protein logged yet.</p>')+'</div>';
+  h += '<h2>Body weight</h2><div class="card">'+
+    (store.scale.filter(s=>s.weight!=null&&s.weight!=="").length?'<div class="chartbox"><canvas id="c-wt"></canvas></div>':'<p class="muted">No scale numbers yet.</p>')+'</div>';
+
+  h += '<h2>Trainer notes</h2><div class="card flush">'+
+    (store.trainerNotes.length ? store.trainerNotes.slice().sort(byDate).map(n=>rowHTML("trainerNotes",n)).join("")
+      : '<div class="empty">A note lands here every week once there\'s a trend worth naming.</div>')+'</div>';
+  return h;
+}
+
+/* ========== charts ========== */
+const charts = {};
+function killCharts(){Object.keys(charts).forEach(k=>{try{charts[k].destroy()}catch(e){} delete charts[k];});}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function baseOpts(){
+  const grid = css("--line"), tick = css("--steel");
+  return {responsive:true,maintainAspectRatio:false,
+    interaction:{mode:"index",intersect:false},
+    plugins:{legend:{labels:{color:tick,boxWidth:12,font:{size:11}}}},
+    scales:{x:{grid:{color:grid},ticks:{color:tick,font:{size:10},maxRotation:0,autoSkip:true}}}};
+}
+function drawCharts(){
+  killCharts();
+  if(typeof Chart==="undefined") return;
+  const grid = css("--line"), tick = css("--steel");
+  const exCanvas = document.getElementById("c-ex");
+  if(exCanvas && state.chartExercise){
+    const rows = store.sets.filter(s=>(s.exercise||"").toLowerCase()===state.chartExercise.toLowerCase())
+      .slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const o = baseOpts();
+    o.scales.y = {position:"left",grid:{color:grid},ticks:{color:tick,font:{size:10}},title:{display:true,text:"lb",color:tick,font:{size:10}}};
+    o.scales.y1 = {position:"right",grid:{display:false},ticks:{color:tick,font:{size:10}},title:{display:true,text:"reps",color:tick,font:{size:10}}};
+    charts.ex = new Chart(exCanvas,{type:"line",data:{
+      labels: rows.map(r=>r.date),
+      datasets:[
+        {label:"Weight (lb)",data:rows.map(r=>r.weight==null||r.weight===""?null:Number(r.weight)),borderColor:css("--red"),backgroundColor:css("--red"),yAxisID:"y",tension:.25,spanGaps:true,pointRadius:4},
+        {label:"Reps",data:rows.map(r=>r.reps==null?null:Number(r.reps)),borderColor:css("--blue"),backgroundColor:css("--blue"),yAxisID:"y1",tension:.25,spanGaps:true,pointRadius:4,borderDash:[5,4]}
+      ]},options:o});
+  }
+  const pro = document.getElementById("c-pro");
+  if(pro){
+    const rows = store.protein.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const o = baseOpts(); o.scales.y={grid:{color:grid},ticks:{color:tick,font:{size:10}},title:{display:true,text:"grams",color:tick,font:{size:10}}};
+    charts.pro = new Chart(pro,{type:"bar",data:{labels:rows.map(r=>r.date),
+      datasets:[{label:"Protein (g)",data:rows.map(r=>Number(r.grams)||0),backgroundColor:css("--green")}]},options:o});
+  }
+  const wt = document.getElementById("c-wt");
+  if(wt){
+    const rows = store.scale.filter(s=>s.weight!=null&&s.weight!=="").slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const o = baseOpts(); o.scales.y={grid:{color:grid},ticks:{color:tick,font:{size:10}},title:{display:true,text:"lb",color:tick,font:{size:10}}};
+    charts.wt = new Chart(wt,{type:"line",data:{labels:rows.map(r=>r.date),
+      datasets:[{label:"Body weight (lb)",data:rows.map(r=>Number(r.weight)),borderColor:css("--ink"),backgroundColor:css("--ink"),tension:.25,pointRadius:4}]},options:o});
+  }
+}
+
+/* ========== render: data ========== */
+function renderData(){
+  const counts = COLLS.map(c=>LABELS[c]+" "+store[c].length).join(" · ");
+  return '<h2>Back up</h2><div class="card">'+
+    '<p>Download everything you\'ve logged. Keep a copy somewhere safe — this is your insurance if the app ever goes away.</p>'+
+    '<p class="muted mono" style="font-size:12px">'+esc(counts)+'</p>'+
+    '<div class="btn-row"><button data-action="export-json">Download JSON</button>'+
+    '<button data-action="export-csv">Download CSV</button></div>'+
+    '<div class="btn-row"><button class="btn-sm" data-action="copy-json">Copy JSON to clipboard</button></div></div>'+
+    '<h2>Restore</h2><div class="card">'+
+    '<p>Pick a JSON file you exported before. Entries merge in — nothing already here gets overwritten.</p>'+
+    '<div class="btn-row"><button data-action="import">Choose file</button></div>'+
+    '<input type="file" id="importer" accept="application/json,.json" style="display:none">'+
+    '<label class="field" style="margin-top:14px"><span>Or paste a backup</span>'+
+    '<textarea id="pastebox" style="min-height:90px;font-family:var(--mono);font-size:13px" placeholder="Paste exported JSON here"></textarea></label>'+
+    '<div class="btn-row"><button class="btn-sm" data-action="paste-restore">Restore from paste</button></div></div>'+
+    '<h2>Weekly note</h2><div class="card"><p class="muted">A trend note is written automatically once a week. Force one now if you want a fresh read.</p>'+
+    '<div class="btn-row"><button class="btn-sm" data-action="force-trend">Write a note now</button></div></div>'+
+    '<h2>Coaching</h2><div class="card">'+
+    (IN_ARTIFACT
+      ? '<p class="muted">Running inside Claude — coaching works with no API key needed.</p>'
+      : '<p>Coaching, parsing and weekly notes call the Anthropic API. Paste your own key to turn them on. It stays in this browser and is only ever sent to Anthropic.</p>'+
+        '<label class="field"><span>API key</span><input type="password" id="apikey" value="'+esc(settings.apiKey)+'" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"></label>'+
+        '<label class="field"><span>Model</span><input type="text" id="apimodel" value="'+esc(settings.model)+'" autocomplete="off" spellcheck="false"></label>'+
+        '<div class="btn-row"><button class="btn-sm" data-action="save-key">Save</button>'+
+        '<button class="btn-sm" data-action="test-key">Test</button>'+
+        (settings.apiKey?'<button class="btn-sm btn-danger" data-action="clear-key">Remove key</button>':'')+'</div>'+
+        (state.keyStatus?'<p class="muted mono" style="font-size:12px">'+esc(state.keyStatus)+'</p>':'')+
+        '<p class="muted" style="font-size:13px;margin-top:8px">Without a key everything else still works — you just log entries by hand instead of dictating them.</p>')+
+    '</div>'+
+    '<h2>Storage</h2><div class="card">'+
+    '<p class="mono" style="font-size:13px">'+(memoryOnly?'<span style="color:var(--red)">Not saving</span>':'<span style="color:var(--green)">Saving normally</span>')+
+    ' · '+saveStats.writes+' writes · '+saveStats.retries+' retries · '+saveStats.skipped+' skipped</p>'+
+    (storageReport?'<p class="muted mono" style="font-size:12px">'+esc(storageReport)+'</p>':'')+
+    (lastSaveError?'<p class="muted mono" style="font-size:12px">Last error: '+esc(lastSaveError)+'</p>':'')+
+    (state.probe?'<p class="muted mono" style="font-size:12px">'+esc(state.probe)+'</p>':'')+
+    '<div class="btn-row"><button class="btn-sm" data-action="probe">Test storage</button></div></div>'+
+    '<h2>Start over</h2><div class="card warnbox">'+
+    '<p>Erases every set, rest day, sick day, protein and scale entry, goal and note, then starts a clean 30-day program with <strong>Day 1 = today</strong>.</p>'+
+    '<p class="muted">Your current log covers '+esc(counts)+'. A backup downloads automatically before anything is erased.</p>'+
+    (state.resetArmed
+      ? '<div class="btn-row"><button data-action="reset-go" style="background:var(--red);border-color:var(--red);color:#fff;flex:1">Erase everything and restart</button>'+
+        '<button class="btn-sm" data-action="reset-cancel">Keep my log</button></div>'
+      : '<div class="btn-row"><button class="btn-danger" data-action="reset-arm">Reset program</button></div>')+
+    '</div>';
+}
+
+/* ========== render root ========== */
+function render(){
+  killCharts();
+  renderHeader(); renderNav();
+  view.innerHTML = state.tab==="checkin"?renderCheckin()
+    : state.tab==="log"?renderLog()
+    : state.tab==="progress"?renderProgress()
+    : renderData();
+  if(state.tab==="progress") drawCharts();
+  const d = document.getElementById("draft");
+  if(d) d.addEventListener("input", e=>{state.draft=e.target.value;});
+}
+function toast(msg){
+  const el = document.createElement("div");
+  el.className="toast"; el.textContent=msg; document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2600);
+}
+
+/* ========== actions ========== */
+document.addEventListener("click", async e=>{
+  const b = e.target.closest("[data-action]");
+  if(!b) return;
+  const a = b.dataset.action;
+
+  if(a==="tab"){ state.tab=b.dataset.tab; state.editing=null; render(); window.scrollTo(0,0); return; }
+  if(a==="logtab"){ state.logTab=b.dataset.tab; state.editing=null; render(); return; }
+  if(a==="send"){ await send(); return; }
+  if(a==="recoach"){ loadCoach(); return; }
+  if(a==="dismiss-note"){ state.trendNote=null; render(); return; }
+
+  if(a==="edit"){ state.editing={coll:b.dataset.coll,id:b.dataset.id}; render(); return; }
+  if(a==="cancel-edit"){ state.editing=null; render(); return; }
+  if(a==="save-edit"){
+    const box = b.closest("[data-editor]");
+    const row = findRow(b.dataset.coll,b.dataset.id);
+    const oldEnd = planEnd();
+    if(row){
+      box.querySelectorAll("[data-field]").forEach(inp=>{
+        const f = inp.dataset.field, t = FIELDS[b.dataset.coll].find(x=>x[0]===f)[1];
+        let v = inp.value.trim();
+        row[f] = v==="" ? (t==="number"?null:"") : (t==="number"?Number(v):v);
+      });
+      await saveStore(); toast("Row saved"); await syncPlan(oldEnd);
+    }
+    state.editing=null; render(); return;
+  }
+  if(a==="del"){
+    const coll=b.dataset.coll, id=b.dataset.id;
+    if(!confirm("Delete this entry? It won't come back.")) return;
+    const oldEnd = planEnd();
+    store[coll] = store[coll].filter(r=>r.id!==id);
+    state.review = state.review.filter(r=>r.id!==id);
+    await saveStore(); toast("Deleted"); await syncPlan(oldEnd); render(); return;
+  }
+  if(a==="quick-day"){
+    const type = b.dataset.type, t = todayISO();
+    if(store.restDays.some(r=>r.date===t)){ toast("Today's already logged as a day off"); return; }
+    const oldEnd = planEnd();
+    const row = {id:newId(), date:t, type, notes:""};
+    store.restDays.push(row);
+    state.review = [{collection:"restDays", id:row.id}];
+    state.reply = type==="sick"
+      ? "Logged as a sick day — the clock is paused and the plan moved out a day. Rest up, you lose nothing here."
+      : "Rest day logged. That's the program working, not a gap in it.";
+    await saveStore(); await syncPlan(oldEnd); render(); loadCoach(); return;
+  }
+
+  if(a==="retry-save"){
+    b.disabled=true; b.textContent="Saving…";
+    const ok = await saveStore();
+    toast(ok===false ? "Still not saving — keep a copy" : "Saved");
+    render(); return;
+  }
+  if(a==="drop-raw"){ store.pendingRaw = store.pendingRaw.filter(p=>p.id!==b.dataset.id); await saveStore(); render(); return; }
+  if(a==="retry-raw"){
+    const p = store.pendingRaw.find(x=>x.id===b.dataset.id);
+    if(p){ state.draft = p.text; store.pendingRaw = store.pendingRaw.filter(x=>x.id!==p.id); await saveStore(); render(); await send(); }
+    return;
+  }
+  if(a==="pick-exercise") return;
+
+  if(a==="export-json"){ download("strength-log-"+todayISO()+".json", JSON.stringify(store,null,2), "application/json"); return; }
+  if(a==="export-csv"){ download("strength-log-"+todayISO()+".csv", toCSV(), "text/csv"); return; }
+  if(a==="copy-json"){
+    try{ await navigator.clipboard.writeText(JSON.stringify(store,null,2)); toast("Copied"); }
+    catch(err){ window.prompt("Copy your backup:", JSON.stringify(store)); }
+    return;
+  }
+  if(a==="import"){ document.getElementById("importer").click(); return; }
+  if(a==="force-trend"){ b.disabled=true; b.textContent="Writing…"; await weeklyNote(true); render(); return; }
+  if(a==="paste-restore"){
+    const box = document.getElementById("pastebox");
+    const txt = (box && box.value || "").trim();
+    if(!txt){ toast("Paste your backup into the box first"); return; }
+    try{
+      const added = await mergeBackup(txt);
+      toast(added+" entries restored"); render();
+    }catch(err){ alert("That didn't read as a valid backup. Paste the full JSON you exported, starting with { and ending with }."); }
+    return;
+  }
+  if(a==="save-key"){
+    const k = document.getElementById("apikey"), m = document.getElementById("apimodel");
+    settings.apiKey = (k && k.value || "").trim();
+    if(m && m.value.trim()) settings.model = m.value.trim();
+    saveSettings();
+    state.keyStatus = settings.apiKey ? "Saved. Coaching is on." : "Key cleared.";
+    render();
+    if(settings.apiKey) loadCoach();
+    return;
+  }
+  if(a==="clear-key"){
+    settings.apiKey = ""; saveSettings();
+    state.keyStatus = "Key removed from this browser.";
+    state.coach = ""; render(); return;
+  }
+  if(a==="test-key"){
+    const k = document.getElementById("apikey");
+    if(k && k.value.trim() && k.value.trim() !== settings.apiKey){ settings.apiKey = k.value.trim(); saveSettings(); }
+    b.disabled = true; b.textContent = "Testing…";
+    state.keyStatus = "Testing…"; 
+    try{
+      const out = await callClaude("Reply with the single word: ready");
+      state.keyStatus = "Working — model replied \""+out.slice(0,20)+"\".";
+    }catch(e){
+      const msg = String(e.message||e);
+      state.keyStatus = msg.includes("NO_KEY") ? "No key saved yet."
+        : msg.includes("401") ? "Key rejected (401). Check for a typo or an expired key."
+        : msg.includes("404") ? "Model name not recognised. Try claude-sonnet-4-6 or another current model."
+        : msg;
+    }
+    render(); return;
+  }
+  if(a==="probe"){
+    b.disabled=true; b.textContent="Testing…";
+    state.probe = "Testing…"; 
+    const stamp = "probe-"+Date.now();
+    try{
+      const t0 = Date.now();
+      await discoverStorage();
+      if(activeMode){
+        await activeMode.set(activeKey+"_probe", stamp);
+        const back = unwrap(await BACKEND.get(activeKey+"_probe", false));
+        state.probe = back===stamp
+          ? "Round-tripped a test value in "+(Date.now()-t0)+"ms. "+storageReport
+          : "Wrote a test value but read back something else.";
+      }else{
+        state.probe = storageReport;
+      }
+    }catch(e){
+      state.probe = "Test write failed: "+String(e && e.message || e);
+    }
+    render(); return;
+  }
+  if(a==="reset-arm"){
+    download("strength-log-backup-"+todayISO()+".json", JSON.stringify(store,null,2), "application/json");
+    state.resetArmed = true; render(); return;
+  }
+  if(a==="reset-cancel"){ state.resetArmed=false; render(); return; }
+  if(a==="reset-go"){ await resetProgram(); return; }
+});
+document.addEventListener("change", async e=>{
+  if(e.target.matches("[data-action='pick-exercise']")){ state.chartExercise=e.target.value; render(); return; }
+  if(e.target.id==="importer"){
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const txt = await f.text();
+      const added = await mergeBackup(txt);
+      toast(added+" entries merged in"); render();
+    }catch(err){ alert("That file didn't read as a valid export. Pick a JSON file downloaded from this app."); }
+  }
+});
+function stripId(o){const c=Object.assign({},o); delete c.id; return c;}
+
+async function mergeBackup(text){
+  const inc = normalize(JSON.parse(text));
+  const oldEnd = planEnd();
+  let added = 0;
+  COLLS.forEach(c=>{
+    inc[c].forEach(r=>{
+      const dup = store[c].some(x=>x.id===r.id || JSON.stringify(stripId(x))===JSON.stringify(stripId(r)));
+      if(!dup){ store[c].push(Object.assign({},r,{id:newId()})); added++; }
+    });
+  });
+  if(inc.meta && inc.meta.start){ store.meta.start = inc.meta.start; START = inc.meta.start; }
+  await saveStore(); await syncPlan(oldEnd);
+  return added;
+}
+/* When the sick-day count changes the finish line moves. Goals still pointing at the
+   old end date follow it; goals with a date Joey chose himself are left alone. */
+async function syncPlan(oldEnd){
+  const end = planEnd();
+  if(end === oldEnd) return;
+  let moved = 0;
+  store.goals.forEach(g=>{ if(g.targetDate===oldEnd){ g.targetDate=end; moved++; } });
+  await saveStore();
+  const dir = end>oldEnd ? "extended to " : "back to ";
+  toast("Plan "+dir+planLength()+" days"+(moved?" · "+moved+" goal date"+(moved>1?"s":"")+" moved":""));
+}
+
+/* ========== send flow ========== */
+async function send(){
+  const text = (document.getElementById("draft")||{}).value?.trim() || state.draft.trim();
+  if(!text){ toast("Type or dictate something first"); return; }
+  if(!coachEnabled()){
+    toast("Add an API key on the Data tab to parse dictation");
+    state.tab = "data"; render(); return;
+  }
+  state.draft = text; state.sending = true; state.reply=""; state.review=[]; render();
+
+  const raw = {id:newId(), date:todayISO(), text, status:"pending"};
+  store.pendingRaw.push(raw); await saveStore();
+
+  const oldEnd = planEnd();
+  let saved = [];
+  try{
+    const out = await parseWithRetry(text);
+    const added = [];
+    COLLS.filter(c=>c!=="trainerNotes").forEach(c=>{
+      (Array.isArray(out[c])?out[c]:[]).forEach(r=>{
+        const row = {id:newId()};
+        FIELDS[c].forEach(([f,t])=>{
+          let v = r[f];
+          if(v===undefined) v = (t==="number"?null:"");
+          if(t==="number" && v!==null && v!=="") { const n=Number(v); v = isNaN(n)?null:n; }
+          row[f]=v;
+        });
+        if(c!=="goals" && !row.date) row.date = todayISO();
+        if(c==="restDays" && !row.type) row.type = "other";
+        store[c].push(row);
+        added.push({c,row});
+      });
+    });
+    /* Set phase and goal dates after every row lands, so a sick day logged in the
+       same breath already counts toward the extended finish line. */
+    added.forEach(({c,row})=>{
+      if(c==="sets" && !row.phase) row.phase = programDay(row.date)<=7?"baseline":"daily";
+      if(c==="goals" && !row.targetDate) row.targetDate = planEnd();
+    });
+    saved = added.map(({c,row})=>({collection:c, id:row.id, row:stripId(row)}));
+    store.pendingRaw = store.pendingRaw.filter(p=>p.id!==raw.id);
+    state.review = saved.map(s=>({collection:s.collection,id:s.id}));
+    await saveStore();
+    await syncPlan(oldEnd);
+    if(!saved.length){
+      state.reply = "I saved your words but couldn't pull any numbers out of them. Try naming the exercise, weight, reps and sets — like \"bench 40 for 10, three sets\".";
+      store.pendingRaw.push(Object.assign({},raw,{status:"unparsed"}));
+      await saveStore();
+    }else{
+      state.draft = "";
+      if(lastParseRepaired) state.reply = "Heads up — that reply got cut off, so some of what you said may be missing. Check the rows below and add anything I dropped.";
+    }
+  }catch(err){
+    console.error(err);
+    const p = store.pendingRaw.find(x=>x.id===raw.id);
+    if(p) p.status = "failed";
+    await saveStore();
+    state.sending=false;
+    state.reply = "That didn't go through, so I kept your text exactly as you wrote it — it's sitting above, ready to retry.";
+    render();
+    return;
+  }
+
+  state.sending = false; render();
+
+  if(saved.length){
+    const warn = lastParseRepaired ? state.reply+" " : "";
+    try{
+      state.reply = warn + await callClaude(replyPrompt(text, saved.map(s=>s.row)));
+    }catch(err){
+      state.reply = warn + "Logged. Nice work showing up today.";
+    }
+    render();
+  }
+  loadCoach();
+}
+
+/* ========== coach + weekly note ========== */
+async function loadCoach(){
+  if(!coachEnabled()){
+    state.coachLoading = false; state.coachErr = false; state.needsKey = true;
+    const dn = programDay(todayISO());
+    state.coach = dn<=7
+      ? "Baseline week, day "+dn+". Log whatever you test today — weight, reps and sets — and find something you can move for 8 to 12 clean reps."
+      : "Day "+dn+". Log what you trained today: exercise, weight, reps, sets.";
+    if(state.tab === "checkin") render();
+    return;
+  }
+  state.needsKey = false;
+  state.coachLoading = true; state.coachErr=false; render();
+  try{
+    state.coach = await callClaude(coachPrompt());
+  }catch(err){
+    console.error(err);
+    state.coachErr = true;
+    const dn = dayNum(todayISO());
+    state.coach = dn<=7
+      ? "Baseline week — what are you testing today? Just find a weight you can move for 8 to 12 clean reps, nothing heroic. Log protein if you tracked it."
+      : "What'd you do today? Give me the exercise, weight and reps and I'll take it from there. Protein and scale numbers welcome if you have them.";
+  }
+  state.coachLoading = false;
+  if(state.tab==="checkin") render();
+}
+/* Wipes everything and rebuilds a clean 30-day structure starting today.
+   Day counts, plan length, baseline week and goal dates all key off meta.start. */
+async function resetProgram(){
+  const t = todayISO();
+  store = normalize({meta:{start:t, created:t}});
+  START = t;
+  state.resetArmed = false;
+  state.review = []; state.reply = ""; state.draft = "";
+  state.trendNote = null; state.editing = null;
+  state.chartExercise = null; state.logTab = "sets";
+  state.tab = "checkin";
+  killCharts();
+  const ok = await saveStore();
+  render(); window.scrollTo(0,0);
+  toast(ok===false ? "Reset — but saving is still failing" : "New program started · Day 1 is today");
+  loadCoach();
+}
+async function weeklyNote(force){
+  const t = todayISO();
+  const last = store.trainerNotes.slice().sort(byDate)[0];
+  const anchor = last ? last.date : START;
+  const due = diffDays(anchor, t) >= 7;
+  const hasData = store.sets.length + store.restDays.length >= 3;
+  if(!force){
+    if(!due || !hasData) return;
+    if(store.meta.lastTrendAttempt === t) return;
+  }
+  store.meta.lastTrendAttempt = t; await saveStore();
+  try{
+    const note = await callClaude(trendPrompt());
+    if(note){
+      const row = {id:newId(), date:t, note};
+      store.trainerNotes.push(row);
+      state.trendNote = row;
+      store.meta.surfaced.push(row.id);
+      await saveStore();
+    }
+  }catch(err){ console.error("trend note failed", err); }
+}
+function surfaceUnseen(){
+  const newest = store.trainerNotes.slice().sort(byDate)[0];
+  if(newest && !store.meta.surfaced.includes(newest.id)){
+    state.trendNote = newest;
+    store.meta.surfaced.push(newest.id);
+    saveStore();
+  }
+}
+
+/* ========== export ========== */
+function download(name, text, mime){
+  try{
+    const blob = new Blob([text],{type:mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url); a.remove();},400);
+    toast("Downloaded "+name);
+  }catch(err){
+    window.prompt("Download blocked — copy your backup instead:", text);
+  }
+}
+function toCSV(){
+  const cols = ["collection","id","date","exercise","weight","reps","sets","phase","type","grams","bodyFatPct","muscleMass","other","baseline","target","targetDate","note","notes"];
+  const q = v => v==null?"":'"'+String(v).replace(/"/g,'""')+'"';
+  const lines = [cols.join(",")];
+  COLLS.forEach(c=>{
+    store[c].slice().sort(byDate).forEach(r=>{
+      lines.push(cols.map(k=> k==="collection"?q(c):q(r[k])).join(","));
+    });
+  });
+  return lines.join("\n");
+}
+
+/* ========== init ========== */
+/* Paced writes can leave one queued, so commit immediately on the way out. */
+["pagehide","beforeunload"].forEach(ev=>window.addEventListener(ev,()=>{ if(_dirty||_waiters.length) flush(true); }));
+document.addEventListener("visibilitychange",()=>{ if(document.hidden && (_dirty||_waiters.length)) flush(true); });
+
+(async function init(){
+  loadSettings();
+  try{ await loadStore(); }
+  catch(e){ store = normalize({}); memoryOnly = true; }
+  render();
+  surfaceUnseen();
+  loadCoach();
+  weeklyNote(false).then(()=>{ if(state.trendNote && state.tab==="checkin") render(); });
+})();
+</script>
