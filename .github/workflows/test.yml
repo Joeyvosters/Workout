@@ -1,0 +1,22 @@
+name: Tests
+
+# The suite has no dependencies — it drives index.html's inline script through
+# Node's built-in vm — so this runs the moment a PR opens or main moves.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run the regression suite
+        run: node test/tests.js
