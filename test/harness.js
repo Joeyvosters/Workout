@@ -51,7 +51,8 @@ Object.assign(__out, {
   extractJSON: extractJSON, parseWithRetry: parseWithRetry, callClaude: callClaude,
   coachEnabled: coachEnabled,
   send: send, loadCoach: loadCoach, weeklyNote: weeklyNote,
-  mergeBackup: mergeBackup, syncPlan: syncPlan, render: render
+  mergeBackup: mergeBackup, syncPlan: syncPlan, render: render,
+  addBlankRow: addBlankRow, discardNewRow: discardNewRow
 });
 `;
 

@@ -176,6 +176,46 @@ test("send: sick day logged with sets extends the plan before goal dates are set
 
 /* =================================================== program-day math ==== */
 
+/* ================================================ manual (by-hand) entry == */
+
+test("manual: addBlankRow builds a defaulted row and opens it for editing", () => {
+  const app = loadApp({ today: "2026-08-10", artifact: true });
+  app.store = app.normalize({});
+  app.addBlankRow("sets");
+  eq(app.store.sets.length, 1, "a blank set row should be appended");
+  const row = app.store.sets[0];
+  eq(row.date, "2026-08-10", "date should default to today");
+  assert(row.phase, "phase should be pre-filled so it is never blank");
+  eq(row.weight, null, "numeric fields start empty (null), not 0");
+  assert(app.state.editing && app.state.editing.isNew, "the row should open in the editor as new");
+  eq(app.state.editing.id, row.id, "the editor should target the new row");
+});
+
+test("manual: a new goal row defaults its target date to the plan end", () => {
+  const app = loadApp({ today: "2026-08-10", artifact: true });
+  app.store = app.normalize({});
+  app.addBlankRow("goals");
+  eq(app.store.goals[0].targetDate, app.planEnd(), "goal date should default to the finish line");
+});
+
+test("manual: abandoning a hand-added row discards it, no blank leaks", () => {
+  const app = loadApp({ today: "2026-08-10", artifact: true });
+  app.store = app.normalize({});
+  app.addBlankRow("sets");
+  eq(app.store.sets.length, 1, "row is present while editing");
+  app.discardNewRow();
+  eq(app.store.sets.length, 0, "cancelling removes the unsaved row");
+});
+
+test("manual: discardNewRow leaves a saved (non-new) edit alone", () => {
+  const app = loadApp({ today: "2026-08-10", artifact: true });
+  app.store = app.normalize({});
+  app.store.sets.push({ id: app.newId(), date: "2026-08-10", exercise: "bench", weight: 40, reps: 10, sets: 3, phase: "daily", notes: "" });
+  app.state.editing = { coll: "sets", id: app.store.sets[0].id }; // an ordinary edit, not new
+  app.discardNewRow();
+  eq(app.store.sets.length, 1, "editing an existing row must never delete it");
+});
+
 test("clock: sick days pause the program day, rest days do not", () => {
   const app = loadApp({ today: "2026-08-10" });
   app.store = app.normalize({
