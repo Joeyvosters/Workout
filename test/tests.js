@@ -176,6 +176,56 @@ test("send: sick day logged with sets extends the plan before goal dates are set
 
 /* =================================================== program-day math ==== */
 
+/* ============================================= bulk import (paste JSON) == */
+
+test("bulk import: pasted JSON (with code fences) is stored, no API call", async () => {
+  const app = loadApp({ today: "2026-08-10", artifact: true });
+  await app.discoverStorage();
+  app.store = app.normalize({});
+  const pasted = "```json\n" + JSON.stringify({
+    sets: [{ date: "2026-08-10", exercise: "Bench Press", weight: 50, reps: 8, sets: 3, notes: "" }],
+    protein: [{ date: "2026-08-10", grams: 150, notes: "" }]
+  }) + "\n```";
+  const added = await app.importParsed(pasted);
+  eq(added.length, 2, "both rows should be ingested");
+  eq(app.store.sets.length, 1);
+  eq(app.store.sets[0].exercise, "Bench Press");
+  assert(app.store.sets[0].phase, "the app should assign phase, not the paste");
+  eq(app.store.protein[0].grams, 150);
+  eq(app.memoryOnly, false, "the paste should be persisted");
+});
+
+test("bulk import: a sick day in the paste extends the plan before goal dates", async () => {
+  const app = loadApp({ today: "2026-08-10", artifact: true });
+  await app.discoverStorage();
+  app.store = app.normalize({});
+  const pasted = JSON.stringify({
+    sets: [{ date: "2026-08-10", exercise: "press", weight: 40, reps: 8, sets: 3 }],
+    restDays: [{ date: "2026-08-10", type: "sick", notes: "flu" }],
+    goals: [{ exercise: "press", baseline: "40x8", target: "45x8" }]
+  });
+  await app.importParsed(pasted);
+  eq(app.planLength(), 31, "the sick day should extend the plan");
+  eq(app.store.goals[0].targetDate, "2026-09-02", "goal date must use the extended finish line");
+});
+
+test("bulk import: junk that isn't JSON throws so the paste is kept", async () => {
+  const app = loadApp({ artifact: true });
+  app.store = app.normalize({});
+  await throws(() => app.importParsed("I did bench press today, felt great"), "should reject non-JSON");
+  eq(app.store.sets.length, 0, "nothing should be stored from junk");
+});
+
+test("bulk import: the copy-paste prompt carries today's date and known exercises", () => {
+  const app = loadApp({ today: "2026-08-10", artifact: true });
+  app.store = app.normalize({});
+  app.store.sets.push({ id: app.newId(), date: "2026-08-05", exercise: "Goblet Squat", weight: 45, reps: 10, sets: 3, phase: "baseline", notes: "" });
+  const prompt = app.bulkImportPrompt();
+  assert(prompt.includes("2026-08-10"), "prompt should embed today's date");
+  assert(prompt.includes("Goblet Squat"), "prompt should list existing exercise names for matching");
+  assert(/Do NOT add a \\?"phase\\?"/.test(prompt) || prompt.includes('Do NOT add a "phase"'), "prompt should tell the model to omit phase");
+});
+
 /* ================================================ manual (by-hand) entry == */
 
 test("manual: addBlankRow builds a defaulted row and opens it for editing", () => {
