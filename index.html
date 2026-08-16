@@ -232,6 +232,7 @@ let state = {
   tab:"checkin", logTab:"sets", chartExercise:null,
   coach:"", coachErr:false, coachLoading:true,
   draft:"", sending:false, reply:"", review:[],
+  bulk:"", importing:false,
   editing:null, banner:null, trendNote:null, resetArmed:false, keyStatus:"", needsKey:false
 };
 
@@ -725,7 +726,7 @@ function renderCheckin(){
     '<button class="btn-sm" data-action="retry-save">Try again</button></div></div>';
 
   if(state.needsKey) h += '<div class="card note-callout"><strong>Coaching is off.</strong>'+
-    '<p class="muted">Add your Anthropic API key on the Data tab and I\'ll read your log, ask about today and parse what you dictate. Until then you can still log entries by hand from the Log tab.</p></div>';
+    '<p class="muted">Add your Anthropic API key on the Data tab and I\'ll read your log, ask about today and parse what you dictate. No key? Log by hand on the Log tab, or parse your workout in a regular Claude chat and paste the JSON into the box below — no key needed.</p></div>';
   h += '<div class="card coach'+(state.coachLoading?" loading":"")+'">'+
     (state.coachLoading ? '<span class="spin"></span>Reading your log…' : esc(state.coach).replace(/\n/g,"<br>")) +
     (state.coachErr ? '<div class="btn-row"><button class="btn-sm" data-action="recoach">Try again</button></div>' : '')+
@@ -753,6 +754,14 @@ function renderCheckin(){
     '<div class="btn-row"><button class="btn-sm" data-action="quick-day" data-type="planned">Rest day</button>'+
     '<button class="btn-sm" data-action="quick-day" data-type="sick" style="color:var(--sick)">Sick day</button></div>'+
     '<p class="muted" style="margin-top:8px">A sick day pauses the clock and adds a day to the plan. A rest day doesn\'t — it\'s part of it.</p></div>';
+
+  h += '<div class="card note-callout"><strong>Paste parsed data</strong>'+
+    '<p class="muted">No API key needed. Parse your workout in a regular Claude chat, then paste the JSON it gives you here and hit Store. Tap below to copy a ready-made prompt for that chat.</p>'+
+    '<div class="btn-row"><button class="btn-sm" data-action="copy-import-prompt">Copy prompt for Claude</button></div>'+
+    '<label class="field" style="margin-top:10px"><span>Parsed JSON</span>'+
+    '<textarea id="bulk" style="min-height:110px;font-family:var(--mono);font-size:13px" placeholder="Paste the JSON from your Claude chat here — starts with { ends with }">'+esc(state.bulk||"")+'</textarea></label>'+
+    '<button class="btn-primary" data-action="import-parsed"'+(state.importing?" disabled":"")+'>'+
+      (state.importing?'<span class="spin"></span>Storing…':'Store parsed data')+'</button></div>';
 
   if(state.reply){
     h += '<div class="card reply">'+esc(state.reply)+'</div>';
@@ -1011,6 +1020,8 @@ function render(){
   if(state.tab==="progress") drawCharts();
   const d = document.getElementById("draft");
   if(d) d.addEventListener("input", e=>{state.draft=e.target.value;});
+  const bx = document.getElementById("bulk");
+  if(bx) bx.addEventListener("input", e=>{state.bulk=e.target.value;});
 }
 function toast(msg){
   const el = document.createElement("div");
@@ -1052,6 +1063,36 @@ document.addEventListener("click", async e=>{
   if(a==="send"){ await send(); return; }
   if(a==="recoach"){ loadCoach(); return; }
   if(a==="dismiss-note"){ state.trendNote=null; render(); return; }
+  if(a==="copy-import-prompt"){
+    const p = bulkImportPrompt();
+    try{ await navigator.clipboard.writeText(p); toast("Prompt copied — paste it into a Claude chat"); }
+    catch(err){ window.prompt("Copy this prompt into a Claude chat:", p); }
+    return;
+  }
+  if(a==="import-parsed"){
+    const box = document.getElementById("bulk");
+    const txt = ((box && box.value) || state.bulk || "").trim();
+    if(!txt){ toast("Paste the JSON from your Claude chat first"); return; }
+    state.bulk = txt; state.importing = true; state.reply = ""; state.review = []; render();
+    try{
+      const added = await importParsed(txt);
+      state.importing = false;
+      if(!added.length){
+        state.reply = "That JSON was valid but had no entries in it. It needs a \"sets\", \"protein\", \"restDays\", \"scale\" or \"goals\" array with rows.";
+        render(); return;
+      }
+      state.bulk = "";
+      state.review = added.map(({c,row})=>({collection:c, id:row.id}));
+      state.reply = "Stored "+added.length+" entr"+(added.length>1?"ies":"y")+" from your paste. Check them below.";
+      render();
+    }catch(err){
+      console.warn("bulk import failed", err);
+      state.importing = false;
+      state.reply = "I couldn't read that as JSON, so nothing was stored and your paste is still here. Paste the JSON object from your chat — it should start with { and end with }.";
+      render();
+    }
+    return;
+  }
 
   if(a==="edit"){ state.editing={coll:b.dataset.coll,id:b.dataset.id}; render(); return; }
   if(a==="add-row"){
@@ -1231,6 +1272,82 @@ async function syncPlan(oldEnd){
   toast("Plan "+dir+planLength()+" days"+(moved?" · "+moved+" goal date"+(moved>1?"s":"")+" moved":""));
 }
 
+/* Turn a parsed object (the JSON the model returns, or that you paste in) into
+   stored rows. Shared by dictation and the bulk-paste box so both store data the
+   same way. Phase and goal dates are set AFTER every row lands, so a sick day in
+   the same batch already counts toward the extended finish line. */
+function ingestParsed(out){
+  const added = [];
+  COLLS.filter(c=>c!=="trainerNotes").forEach(c=>{
+    (Array.isArray(out[c])?out[c]:[]).forEach(r=>{
+      const row = {id:newId()};
+      FIELDS[c].forEach(([f,t])=>{
+        let v = r[f];
+        if(v===undefined) v = (t==="number"?null:"");
+        if(t==="number" && v!==null && v!=="") { const n=Number(v); v = isNaN(n)?null:n; }
+        row[f]=v;
+      });
+      if(c!=="goals" && !row.date) row.date = todayISO();
+      if(c==="restDays" && !row.type) row.type = "other";
+      store[c].push(row);
+      added.push({c,row});
+    });
+  });
+  added.forEach(({c,row})=>{
+    if(c==="sets" && !row.phase) row.phase = programDay(row.date)<=7?"baseline":"daily";
+    if(c==="goals" && !row.targetDate) row.targetDate = planEnd();
+  });
+  return added;
+}
+/* Bulk import: take already-parsed JSON (pasted from a regular Claude chat) and
+   store it — no API call. Tolerant of code fences and surrounding prose via
+   extractJSON. Throws when there's no JSON object, so the caller keeps the paste. */
+async function importParsed(text){
+  const out = extractJSON(text);
+  const oldEnd = planEnd();
+  const added = ingestParsed(out);
+  await saveStore();
+  await syncPlan(oldEnd);
+  return added;
+}
+/* The prompt to paste into a regular Claude chat. It carries today's date and the
+   exercise names already in the log so names and dates match, and tells the model
+   to leave out the fields the app fills itself (phase, goal target dates). */
+function bulkImportPrompt(){
+  const known = exercises();
+  return [
+    "You are helping me log a workout into my strength tracker. First, if I haven't already told you what I did, ask me in plain language what I trained today — exercises with weight, reps and number of sets — plus, optionally, protein (grams), smart-scale numbers, or whether it was a rest or sick day. Ask follow-ups until you have the numbers.",
+    "",
+    "Then output ONE JSON object and nothing else — no prose, no code fence — in exactly this shape (include only the keys that have rows):",
+    "{",
+    ' "sets":[{"date":"YYYY-MM-DD","exercise":"string","weight":number|null,"reps":number|null,"sets":number,"notes":"string"}],',
+    ' "restDays":[{"date":"YYYY-MM-DD","type":"planned"|"sick"|"travel"|"other","notes":"string"}],',
+    ' "protein":[{"date":"YYYY-MM-DD","grams":number,"notes":"string"}],',
+    ' "scale":[{"date":"YYYY-MM-DD","weight":number|null,"bodyFatPct":number|null,"muscleMass":number|null,"other":"string","notes":"string"}],',
+    ' "goals":[{"exercise":"string","baseline":"string","target":"string","notes":"string"}]',
+    "}",
+    "",
+    "Rules:",
+    "- Today is "+todayISO()+". Default every date to today unless I clearly name another day; resolve \"yesterday\" relative to today.",
+    "- Do NOT add a \"phase\" field to sets or a \"targetDate\" to goals — my app fills those in.",
+    "- One row per exercise. \"bench 40 for 10, three sets\" means weight 40, reps 10, sets 3.",
+    "- If different sets of the same exercise used different weights, write one row per weight.",
+    "- Single-arm work: one row, and say \"per arm\" in notes.",
+    "- Bodyweight, bands, or anything with no stated load: weight null, put the detail in notes.",
+    "- Cardio counts: walking or treadmill is a sets row with weight null, reps null, sets 1, and the distance or time in notes.",
+    "- weight is in pounds; use null for bodyweight movements like pull-ups.",
+    "- If a number is genuinely ambiguous, leave it null and quote it in notes rather than guessing.",
+    known.length
+      ? "- Match exercise names to ones already in my log when I clearly mean the same movement: "+known.join(", ")+". Otherwise use a clean, plain name."
+      : "- Use clean, plain exercise names.",
+    "- \"Too tired\", \"sore\", or \"skipped\" is a rest day (type \"planned\"), not a sick day. Use \"sick\" only when I'm actually ill.",
+    "- Put anything qualitative (felt easy, shoulder tweak, last set was a grind) into that row's notes.",
+    "- Invent nothing.",
+    "",
+    "When you have everything, give me only the final JSON so I can paste it straight into my tracker."
+  ].join("\n");
+}
+
 /* ========== send flow ========== */
 async function send(){
   const text = (document.getElementById("draft")||{}).value?.trim() || state.draft.trim();
@@ -1248,28 +1365,7 @@ async function send(){
   let saved = [];
   try{
     const out = await parseWithRetry(text);
-    const added = [];
-    COLLS.filter(c=>c!=="trainerNotes").forEach(c=>{
-      (Array.isArray(out[c])?out[c]:[]).forEach(r=>{
-        const row = {id:newId()};
-        FIELDS[c].forEach(([f,t])=>{
-          let v = r[f];
-          if(v===undefined) v = (t==="number"?null:"");
-          if(t==="number" && v!==null && v!=="") { const n=Number(v); v = isNaN(n)?null:n; }
-          row[f]=v;
-        });
-        if(c!=="goals" && !row.date) row.date = todayISO();
-        if(c==="restDays" && !row.type) row.type = "other";
-        store[c].push(row);
-        added.push({c,row});
-      });
-    });
-    /* Set phase and goal dates after every row lands, so a sick day logged in the
-       same breath already counts toward the extended finish line. */
-    added.forEach(({c,row})=>{
-      if(c==="sets" && !row.phase) row.phase = programDay(row.date)<=7?"baseline":"daily";
-      if(c==="goals" && !row.targetDate) row.targetDate = planEnd();
-    });
+    const added = ingestParsed(out);
     saved = added.map(({c,row})=>({collection:c, id:row.id, row:stripId(row)}));
     store.pendingRaw = store.pendingRaw.filter(p=>p.id!==raw.id);
     state.review = saved.map(s=>({collection:s.collection,id:s.id}));

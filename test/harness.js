@@ -52,7 +52,8 @@ Object.assign(__out, {
   coachEnabled: coachEnabled,
   send: send, loadCoach: loadCoach, weeklyNote: weeklyNote,
   mergeBackup: mergeBackup, syncPlan: syncPlan, render: render,
-  addBlankRow: addBlankRow, discardNewRow: discardNewRow
+  addBlankRow: addBlankRow, discardNewRow: discardNewRow,
+  ingestParsed: ingestParsed, importParsed: importParsed, bulkImportPrompt: bulkImportPrompt
 });
 `;
 
