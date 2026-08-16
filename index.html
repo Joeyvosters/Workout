@@ -834,11 +834,14 @@ function renderLog(){
   const rows = tabRows(c).slice().sort(byDate);
   let h = '<div class="chips">'+LOG_TABS.map(k=>
     '<button class="chip" data-action="logtab" data-tab="'+k+'" aria-pressed="'+(k===c)+'">'+LABELS[k]+' '+tabRows(k).length+'</button>').join("")+'</div>';
+  if(!(state.editing && state.editing.isNew))
+    h += '<div class="btn-row"><button class="btn-primary" data-action="add-row" data-coll="'+coll+'"'+
+      (c==="sickDays"?' data-type="sick"':'')+' style="margin-top:0">+ Add entry by hand</button></div>';
   h += '<div class="card flush">';
   h += rows.length ? rows.map(r=>rowHTML(coll,r)).join("")
     : '<div class="empty">'+(c==="sickDays"
-        ? "No sick days logged. Log one and the plan pushes out a day to make up for it."
-        : "Nothing here yet. Log it from the check-in screen and it lands here.")+'</div>';
+        ? "No sick days logged. Add one by hand above, or the plan pushes out a day for each you log."
+        : "Nothing here yet — add one by hand with the button above, or dictate it from the check-in screen.")+'</div>';
   h += '</div>';
   if(c==="sickDays") h += '<p class="muted" style="padding:0 2px">Each sick day adds a day to the plan. Change a day\'s type to <strong>planned</strong> if it was really just rest.</p>';
   else if(c!=="goals"&&c!=="trainerNotes") h += '<p class="muted" style="padding:0 2px">Newest first. Tap Edit to fix a number.</p>';
@@ -1015,30 +1018,62 @@ function toast(msg){
   setTimeout(()=>el.remove(), 2600);
 }
 
+/* Manual entry. Build a blank row with sensible defaults and open it straight
+   in the editor — this is how you log without an API key or dictation. */
+function addBlankRow(coll, type){
+  const oldEnd = planEnd();
+  const row = {id:newId()};
+  FIELDS[coll].forEach(([f,t])=>{ row[f] = t==="number" ? null : ""; });
+  if(FIELDS[coll].some(([f])=>f==="date")) row.date = todayISO();
+  if(coll==="restDays") row.type = type || "planned";
+  if(coll==="sets") row.phase = programDay(row.date)<=7 ? "baseline" : "daily";
+  if(coll==="goals") row.targetDate = planEnd();
+  store[coll].push(row);
+  state.editing = {coll, id:row.id, isNew:true, oldEnd};
+  return row;
+}
+/* A hand-added row isn't saved until "Save row"; drop it if the edit is
+   abandoned (Cancel, tab switch) so no blank rows leak into the log. */
+function discardNewRow(){
+  if(state.editing && state.editing.isNew){
+    const {coll,id} = state.editing;
+    store[coll] = (store[coll]||[]).filter(r=>r.id!==id);
+  }
+}
+
 /* ========== actions ========== */
 document.addEventListener("click", async e=>{
   const b = e.target.closest("[data-action]");
   if(!b) return;
   const a = b.dataset.action;
 
-  if(a==="tab"){ state.tab=b.dataset.tab; state.editing=null; render(); window.scrollTo(0,0); return; }
-  if(a==="logtab"){ state.logTab=b.dataset.tab; state.editing=null; render(); return; }
+  if(a==="tab"){ discardNewRow(); state.tab=b.dataset.tab; state.editing=null; render(); window.scrollTo(0,0); return; }
+  if(a==="logtab"){ discardNewRow(); state.logTab=b.dataset.tab; state.editing=null; render(); return; }
   if(a==="send"){ await send(); return; }
   if(a==="recoach"){ loadCoach(); return; }
   if(a==="dismiss-note"){ state.trendNote=null; render(); return; }
 
   if(a==="edit"){ state.editing={coll:b.dataset.coll,id:b.dataset.id}; render(); return; }
-  if(a==="cancel-edit"){ state.editing=null; render(); return; }
+  if(a==="add-row"){
+    const row = addBlankRow(b.dataset.coll, b.dataset.type);
+    render();
+    const ed = document.querySelector('[data-editor="'+b.dataset.coll+'|'+row.id+'"]');
+    if(ed && ed.scrollIntoView) ed.scrollIntoView({block:"center"});
+    return;
+  }
+  if(a==="cancel-edit"){ discardNewRow(); state.editing=null; render(); return; }
   if(a==="save-edit"){
     const box = b.closest("[data-editor]");
     const row = findRow(b.dataset.coll,b.dataset.id);
-    const oldEnd = planEnd();
+    const oldEnd = (state.editing && state.editing.oldEnd != null) ? state.editing.oldEnd : planEnd();
     if(row){
       box.querySelectorAll("[data-field]").forEach(inp=>{
         const f = inp.dataset.field, t = FIELDS[b.dataset.coll].find(x=>x[0]===f)[1];
         let v = inp.value.trim();
         row[f] = v==="" ? (t==="number"?null:"") : (t==="number"?Number(v):v);
       });
+      if(b.dataset.coll==="sets" && !row.phase) row.phase = programDay(row.date||todayISO())<=7?"baseline":"daily";
+      if(b.dataset.coll==="restDays" && !row.type) row.type = "other";
       await saveStore(); toast("Row saved"); await syncPlan(oldEnd);
     }
     state.editing=null; render(); return;

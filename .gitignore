@@ -1,0 +1,6 @@
+.DS_Store
+node_modules/
+*.log
+# Local backups exported from the app — keep your training data out of git
+strength-log-*.json
+strength-log-*.csv

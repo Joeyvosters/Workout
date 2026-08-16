@@ -1,0 +1,9 @@
+{
+  "name": "strength-tracker",
+  "version": "1.0.0",
+  "description": "Single-file strength training tracker and coach.",
+  "private": true,
+  "scripts": {
+    "test": "node test/tests.js"
+  }
+}
